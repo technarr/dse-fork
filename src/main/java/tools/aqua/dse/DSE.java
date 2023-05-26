@@ -29,9 +29,7 @@ import tools.aqua.dse.witness.WitnessNode;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class DSE {
 
@@ -47,14 +45,14 @@ public class DSE {
         Explorer explorer = new Explorer(config);
         Executor executor = new Executor(config);
 
-        List<String> flows = new LinkedList<>();
+        List<List<String>> flows = new LinkedList<>();
 
         while (explorer.hasNextValuation()) {
             Valuation val = explorer.getNextValuation();
             Trace trace = executor.execute(val);
             if (trace != null) {
                 trace.print();
-                flows.addAll(trace.getFlows());
+                flows.add(new LinkedList<>(trace.getFlows()));
             } else {
                 System.out.println("== no trace obtained.");
             }
@@ -67,8 +65,24 @@ public class DSE {
         System.out.println(explorer.getAnalysis());
 
         InformationFlowAnalysis ia = new InformationFlowAnalysis(config);
-        for (String f : flows) {
-            ia.addFlow(f);
+
+        int slotCount = (int) ((double) flows.size() * config.getFraction());
+        System.out.println("Flows recorded for " + flows.size() + " paths. " +
+                "Using " + slotCount + " (" + config.getFraction() +
+                ") paths for information flow analysis." );
+
+        Random rand = config.getRandom();
+
+        Set<Integer> slots = new TreeSet<>();
+        while (slots.size() < slotCount) {
+            slots.add(rand.nextInt(flows.size()));
+        }
+
+        for (Integer idx : slots) {
+            List<String> fList = flows.get(idx);
+            for (String f : fList) {
+                ia.addFlow(f);
+            }
         }
         //ia.listFlows();
         ia.runChecks();

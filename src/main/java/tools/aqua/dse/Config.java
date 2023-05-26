@@ -32,6 +32,7 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 
 public class Config {
 
@@ -71,6 +72,10 @@ public class Config {
     private boolean incremental = false;
 
     private boolean witness = false;
+
+    private Random random = null;
+
+    private double fraction = 1.0;
 
     private ClassLoader sourceLoader = Config.class.getClassLoader();
 
@@ -159,6 +164,15 @@ public class Config {
 
     public boolean isWitness() { return witness; }
 
+
+    public double getFraction() {
+        return fraction;
+    }
+
+    public Random getRandom() {
+        return random;
+    }
+
     private void parseProperties(Properties props) {
         if (props.containsKey("dse.executor.args")) {
             this.executorArgs = props.getProperty("dse.executor.args");
@@ -210,6 +224,15 @@ public class Config {
 
             sourceLoader = new URLClassLoader(urls);
         }
+        if (props.containsKey("iflow.fraction")) {
+            this.fraction = Double.parseDouble(props.getProperty("iflow.fraction"));
+        }
+        long seed = (new Random()).nextLong();
+        if (props.containsKey("random.seed")) {
+            seed = Long.parseLong(props.getProperty("random.seed"));
+        }
+        System.out.println("Random seed: " + seed);
+        this.random = new Random(seed);
     }
 
     private int parseTermination(String property) {

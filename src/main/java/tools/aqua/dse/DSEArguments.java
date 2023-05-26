@@ -81,6 +81,8 @@ public class DSEArguments {
         printDSEOptionHelp("dse.bounds.type", "fibonacci: uses fibonacci seq. from index 2 (1, 2, 3, 5, ...) as steps");
         printDSEOptionHelp("dse.witness", "save witness file if possible: true / false (default)");
         printDSEOptionHelp("dse.sources", "path to folder with sources");
+        printDSEOptionHelp("iflow.fraction", "fraction of paths to use in information flow analysis (double)");
+        printDSEOptionHelp("random.seed", "random seed (long value)");
         System.out.println();
     }
 
