@@ -22,6 +22,7 @@ import gov.nasa.jpf.constraints.solvers.ConstraintSolverFactory;
 import gov.nasa.jpf.constraints.solvers.SolvingService;
 import org.apache.commons.cli.CommandLine;
 import tools.aqua.dse.bounds.BoundedSolverProvider;
+import tools.aqua.dse.objects.Objects;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -84,6 +85,8 @@ public class Config {
 
     private final Properties properties;
 
+    private Objects objects = null;
+
     private Config(Properties properties) {
         this.properties = properties;
     }
@@ -120,7 +123,12 @@ public class Config {
      * @return
      */
     public SolverContext getSolverContext() {
-        return this.solver.createContext();
+        SolverContext ctx = this.solver.createContext();
+        // init object constraints signature
+        if (objects != null) {
+            objects.initObjectsStructure(ctx);
+        }
+        return ctx;
     }
 
     /**
@@ -227,6 +235,11 @@ public class Config {
         if (props.containsKey("iflow.fraction")) {
             this.fraction = Double.parseDouble(props.getProperty("iflow.fraction"));
         }
+
+        if (props.containsKey("static.info")) {
+            this.objects = new Objects(props.getProperty("static.info"));
+        }
+
         long seed = (new Random()).nextLong();
         if (props.containsKey("random.seed")) {
             seed = Long.parseLong(props.getProperty("random.seed"));

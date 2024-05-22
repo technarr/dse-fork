@@ -450,7 +450,8 @@ public class ConstraintsTree {
         if ((nextOpen.parent() == null && root != nextOpen)
             || (nextOpen.parent() != null
                 && nextOpen.parent().getChild(nextOpen.childId()) != nextOpen)
-            || nextOpen.isFinal()) {
+            || nextOpen.isFinal()
+            || (nextOpen.parent() != null && nextOpen.parent().isExhausted())) {
           nextOpen = null;
           continue;
         }

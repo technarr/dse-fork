@@ -82,6 +82,7 @@ public class DSEArguments {
         printDSEOptionHelp("dse.witness", "save witness file if possible: true / false (default)");
         printDSEOptionHelp("dse.sources", "path to folder with sources");
         printDSEOptionHelp("iflow.fraction", "fraction of paths to use in information flow analysis (double)");
+        printDSEOptionHelp("static.info", "static information on inheritance and constructors for objects");
         printDSEOptionHelp("random.seed", "random seed (long value)");
         System.out.println();
     }
