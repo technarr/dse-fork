@@ -24,8 +24,7 @@ import org.apache.commons.cli.CommandLine;
 import tools.aqua.dse.bounds.BoundedSolverProvider;
 import tools.aqua.dse.objects.Objects;
 
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -237,7 +236,19 @@ public class Config {
         }
 
         if (props.containsKey("static.info")) {
-            this.objects = new Objects(props.getProperty("static.info"));
+            String filename = props.getProperty("static.info");
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader r = new BufferedReader(new FileReader(filename))) {
+                String line = null;
+                while ((line = r.readLine()) != null) {
+                    sb.append(line);
+                }
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            this.objects = new Objects(sb.toString());
         }
 
         long seed = (new Random()).nextLong();
