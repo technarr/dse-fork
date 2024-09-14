@@ -74,7 +74,7 @@ public class TestGeneratorImpl implements TestGenerator {
         DefaultPrettyPrinter prettyPrinter = new DefaultPrettyPrinter(printerConfiguration);
 
         try {
-            final Path testsDir = Path.of(TESTS_DIRECTORY);
+            final Path testsDir = Paths.get(TESTS_DIRECTORY);
             if (!Files.exists(testsDir)) {
                 Files.createDirectory(testsDir);
             }
