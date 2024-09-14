@@ -23,9 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 //TODO: einige logs auf debug
@@ -36,6 +34,20 @@ public class TestGeneratorImpl implements TestGenerator {
     private static final int METHOD_NAME_VARIABLE_LIMIT = 3;
     private static final String PACKAGE_DECLARATION = "com.example";
 
+    private static final Map<Class<?>, String> verifierMethodMap = new HashMap<>();
+
+    static {
+        verifierMethodMap.put(Boolean.class, "Verifier::nondetBoolean");
+        verifierMethodMap.put(Byte.class, "Verifier::nondetByte");
+        verifierMethodMap.put(Character.class, "Verifier::nondetChar");
+        verifierMethodMap.put(Short.class, "Verifier::nondetShort");
+        verifierMethodMap.put(Integer.class, "Verifier::nondetInt");
+        verifierMethodMap.put(Long.class, "Verifier::nondetLong");
+        verifierMethodMap.put(Float.class, "Verifier::nondetFloat");
+        verifierMethodMap.put(Double.class, "Verifier::nondetDouble");
+        verifierMethodMap.put(String.class, "Verifier::nondetString");
+    }
+
     private final STGroup templates;
     private final Random random = new Random();
 
@@ -45,7 +57,7 @@ public class TestGeneratorImpl implements TestGenerator {
 
     @Override
     public void generateTestsBasedOnValuations(final @NotNull List<Valuation> valuations) {
-        log.info("Generating tests for valuations-------");
+        log.info("Generating test class for valuations-------");
 
         final String className = generateClassName(valuations);
         List<String> methods = valuations
@@ -77,11 +89,16 @@ public class TestGeneratorImpl implements TestGenerator {
             final Path testsDir = Paths.get(TESTS_DIRECTORY);
             if (!Files.exists(testsDir)) {
                 Files.createDirectory(testsDir);
+            } else if (!Files.isDirectory(testsDir)) {
+                throw new IOException(testsDir + " exists but is not a directory.");
             }
+
             Files.write(
-                    Paths.get(TESTS_DIRECTORY + className + ".java"), prettyPrinter
+                    Paths.get(TESTS_DIRECTORY + className + ".java"),
+                    prettyPrinter
                             .print(cu)
-                            .getBytes(StandardCharsets.UTF_8));
+                            .getBytes(StandardCharsets.UTF_8)
+            );
             log.info("Successfully saved file {}", className);
         } catch (IOException e) {
             log.error("Could not print file {}", className, e);
@@ -105,16 +122,12 @@ public class TestGeneratorImpl implements TestGenerator {
         BlockStmt body = new BlockStmt();
         generateMethodBody(valuation, body);
 
-        StringBuilder bodyBuilder = new StringBuilder();
-        NodeList<Statement> statements = body.getStatements();
-        for (int i = 0; i < statements.size(); i++) {
-            final Statement statement = statements.get(i);
-            bodyBuilder.append(statement.toString());
-            if (i < statements.size() - 1) {
-                bodyBuilder.append("\n");
-            }
-        }
-        testMethodTemplate.add("body", bodyBuilder.toString());
+        String bodyString = body
+                .getStatements()
+                .stream()
+                .map(Statement::toString)
+                .collect(Collectors.joining("\n"));
+        testMethodTemplate.add("body", bodyString);
 
         return testMethodTemplate.render();
     }
@@ -144,7 +157,7 @@ public class TestGeneratorImpl implements TestGenerator {
             @NotNull final BlockStmt body
     ) {
         log.info("Creating method body for valuation {}", valuation);
-        final Collection<ValuationEntry<?>> valuationEntries = valuation.entries();
+        final List<ValuationEntry<?>> valuationEntries = new ArrayList<>(valuation.entries());
 
         final String originalClassCall = "Example4.main(new String[]{});";
         if (valuationEntries.isEmpty()) {
@@ -154,9 +167,10 @@ public class TestGeneratorImpl implements TestGenerator {
 
         TryStmt tryStmt = new TryStmt();
         VariableDeclarationExpr resource = new VariableDeclarationExpr(
-                new VariableDeclarator(StaticJavaParser.parseClassOrInterfaceType("MockedStatic<Verifier>"),
-                                       "mockedVerifier",
-                                       StaticJavaParser.parseExpression("Mockito.mockStatic(Verifier.class)")
+                new VariableDeclarator(
+                        StaticJavaParser.parseClassOrInterfaceType("MockedStatic<Verifier>"),
+                        "mockedVerifier",
+                        StaticJavaParser.parseExpression("Mockito.mockStatic(Verifier.class)")
                 ));
         tryStmt.setResources(NodeList.nodeList(resource));
         BlockStmt tryBlock = new BlockStmt();
@@ -168,52 +182,94 @@ public class TestGeneratorImpl implements TestGenerator {
 
 
     private void addVerifierCalls(
-            @NotNull final Collection<ValuationEntry<?>> valuationEntries,
+            @NotNull final List<ValuationEntry<?>> valuationEntries,
             @NotNull final BlockStmt tryBlock
     ) {
-        for (final ValuationEntry<?> entry : valuationEntries) {
-            final String methodCall = getVerifierMockingForValueType(entry.getValue());
+        final Map<Class<?>, List<Object>> valueClassToValuesMap = new HashMap<>();
+        valuationEntries.forEach(entry -> valueClassToValuesMap
+                .computeIfAbsent(entry
+                                         .getValue()
+                                         .getClass(), k -> new ArrayList<>())
+                .add(entry.getValue()));
+
+        valueClassToValuesMap.forEach((clazz, values) -> {
+            sortValuesByVariableName(valuationEntries, values);
+
+            final String methodCall = getVerifierMockingForValueType(clazz, values);
             tryBlock.addStatement(StaticJavaParser.parseStatement(methodCall));
-        }
+        });
     }
 
-    private @NotNull String getVerifierMockingForValueType(@NotNull final Object value) {
-        String verifierCall;
-        String valuePlaceholderString;
+    private void sortValuesByVariableName(
+            @NotNull final List<ValuationEntry<?>> valuationEntries,
+            @NotNull final List<Object> values
+    ) {
+        // Provided variables are non-ordered, however, their order is important for the mocked verifier call returns
+        values.sort(Comparator.comparingInt(v -> {
+            String name = valuationEntries
+                    .stream()
+                    .filter(entry -> entry
+                            .getValue()
+                            .equals(v))
+                    .findFirst()
+                    .map(entry -> entry
+                            .getVariable()
+                            .getName())
+                    .orElse("");
+            return Integer.parseInt(name.substring(name.lastIndexOf('_') + 1));
+        }));
+    }
 
-        if (value instanceof Boolean) {
-            verifierCall = "Verifier.nondetBoolean()";
-            valuePlaceholderString = "%b";
-        } else if (value instanceof Byte) {
-            verifierCall = "Verifier.nondetByte()";
-            valuePlaceholderString = "(byte)%d";
-        } else if (value instanceof Character) {
-            verifierCall = "Verifier.nondetChar()";
-            valuePlaceholderString = "'%c'";
-        } else if (value instanceof Short) {
-            verifierCall = "Verifier.nondetShort()";
-            valuePlaceholderString = "(short)%d";
-        } else if (value instanceof Integer) {
-            verifierCall = "Verifier.nondetInt()";
-            valuePlaceholderString = "%d";
-        } else if (value instanceof Long) {
-            verifierCall = "Verifier.nondetLong()";
-            valuePlaceholderString = "%dL";
-        } else if (value instanceof Float) {
-            verifierCall = "Verifier.nondetFloat()";
-            valuePlaceholderString = "%f";
-        } else if (value instanceof Double) {
-            verifierCall = "Verifier.nondetDouble()";
-            valuePlaceholderString = "%f";
-        } else if (value instanceof String) {
-            verifierCall = "Verifier.nondetString()";
-            valuePlaceholderString = "\"%s\"";
-        } else {
-            throw new IllegalArgumentException("Unsupported value type: " + value.getClass());
+
+    private @NotNull String getVerifierMockingForValueType(
+            @NotNull final Class<?> clazz,
+            @NotNull final List<Object> values
+    ) {
+        String verifierCall = verifierMethodMap.get(clazz);
+        if (verifierCall == null) {
+            throw new IllegalArgumentException("Unsupported value type: " + clazz);
         }
 
-        final String callWithValuePlaceholder = String.format(
-                "mockedVerifier.when(() -> %s).thenReturn(%s);", verifierCall, valuePlaceholderString);
-        return String.format(callWithValuePlaceholder, value);
+        String valuePlaceholderString = generateValuePlaceholderString(clazz, values);
+
+        return String.format(
+                "mockedVerifier.when(%s).thenReturn(%s);",
+                verifierCall,
+                String.format(
+                        String.join(", ", Collections.nCopies(values.size(), valuePlaceholderString)),
+                        values.toArray()
+                )
+        );
+    }
+
+    @NotNull
+    private String generateValuePlaceholderString(
+            @NotNull final Class<?> clazz,
+            @NotNull final List<Object> values
+    ) {
+        if (values.isEmpty()) {
+            throw new IllegalArgumentException("Number of values must be greater than zero.");
+        }
+
+        if (clazz == Boolean.class) {
+            return "%b";
+        } else if (clazz == Byte.class) {
+            return "(byte)%d";
+        } else if (clazz == Short.class) {
+            return "(short)%d";
+        } else if (clazz == Integer.class) {
+            return "%d";
+        } else if (clazz == Character.class) {
+            return "'%c'";
+        } else if (clazz == Long.class) {
+            return "%dL";
+        } else if (clazz == Float.class || clazz == Double.class) {
+            return "%f";
+        } else if (clazz == String.class) {
+            return "\"%s\"";
+        }
+
+
+        throw new IllegalArgumentException("Unsupported value type: " + clazz);
     }
 }
