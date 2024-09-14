@@ -21,6 +21,8 @@ import org.stringtemplate.v4.STGroup;
 import org.stringtemplate.v4.STRawGroupDir;
 import tools.aqua.dse.iflow.InformationFlowAnalysis;
 import tools.aqua.dse.paths.PathResult;
+import tools.aqua.dse.testgeneration.TestGenerator;
+import tools.aqua.dse.testgeneration.TestGeneratorImpl;
 import tools.aqua.dse.trace.Trace;
 import tools.aqua.dse.trace.WitnessAssumption;
 import tools.aqua.dse.witness.WitnessEdge;
@@ -47,8 +49,10 @@ public class DSE {
 
         List<List<String>> flows = new LinkedList<>();
 
+        final List<Valuation> valuations = new ArrayList<>();
         while (explorer.hasNextValuation()) {
             Valuation val = explorer.getNextValuation();
+            valuations.add(val);
             Trace trace = executor.execute(val);
             if (trace != null) {
                 trace.print();
@@ -62,6 +66,8 @@ public class DSE {
             checkAndSaveWitness(trace);
         }
 
+        final TestGenerator testGenerator = new TestGeneratorImpl();
+        testGenerator.generateTestsBasedOnValuations(valuations);
         System.out.println(explorer.getAnalysis());
 
         InformationFlowAnalysis ia = new InformationFlowAnalysis(config);
