@@ -26,16 +26,14 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
-//TODO: einige logs auf debug
 @Slf4j
 public class TestGeneratorImpl implements TestGenerator {
 
     public static final String TESTS_DIRECTORY = "generated-tests/";
-    private static final int METHOD_NAME_VARIABLE_LIMIT = 3;
     private static final String PACKAGE_DECLARATION = "com.example";
+    public static final String TEST_METHOD_NAME_PREFIX = "test_valuationNr_";
 
     private static final Map<Class<?>, String> verifierMethodMap = new HashMap<>();
-
     static {
         verifierMethodMap.put(Boolean.class, "Verifier::nondetBoolean");
         verifierMethodMap.put(Byte.class, "Verifier::nondetByte");
@@ -49,15 +47,15 @@ public class TestGeneratorImpl implements TestGenerator {
     }
 
     private final STGroup templates;
-    private final Random random = new Random();
+    private int valuationNo = 0;
 
     public TestGeneratorImpl() {
-        this.templates = new TemplateLoader().getTemplates();
+        this.templates = new TemplateLoaderImpl().getTemplates();
     }
 
     @Override
     public void generateTestsBasedOnValuations(final @NotNull List<Valuation> valuations) {
-        log.info("Generating test class for valuations-------");
+        log.info("Generating test class based on valuations -------");
 
         final String className = generateClassName(valuations);
         List<String> methods = valuations
@@ -72,13 +70,13 @@ public class TestGeneratorImpl implements TestGenerator {
 
         String generatedCode = testClassTemplate.render();
 
-        log.info("Generated Code:%n{}", generatedCode);
+        log.debug(String.format("Generated Code:%n%s", generatedCode));
 
         CompilationUnit cu;
         try {
             cu = StaticJavaParser.parse(generatedCode);
         } catch (ParseProblemException e) {
-            log.error("Error parsing generated code: {}", e.getMessage());
+            log.error(String.format("Error parsing generated code: %s", generatedCode), e);
             return;
         }
 
@@ -104,7 +102,7 @@ public class TestGeneratorImpl implements TestGenerator {
             log.error("Could not print file {}", className, e);
         }
 
-        log.info("DONE-----------------------------");
+        log.info("DONE -----------------------------");
     }
 
 
@@ -114,8 +112,8 @@ public class TestGeneratorImpl implements TestGenerator {
 
     @NotNull
     private String generateTestMethod(@NotNull final Valuation valuation) {
-        final String methodName = generateMethodName(valuation);
-        log.info("MethodName: {}", methodName);
+        final String methodName = generateMethodName();
+        log.debug("MethodName: {}", methodName);
 
         ST testMethodTemplate = templates.getInstanceOf("testMethod");
         testMethodTemplate.add("methodName", methodName);
@@ -132,31 +130,15 @@ public class TestGeneratorImpl implements TestGenerator {
         return testMethodTemplate.render();
     }
 
-    private @NotNull String generateMethodName(@NotNull final Valuation valuation) { //TODO: better approach?
-        final StringBuilder methodNameBuilder = new StringBuilder("test");
-        final Collection<ValuationEntry<?>> valuationEntries = valuation.entries();
-        valuationEntries
-                .stream()
-                .limit(METHOD_NAME_VARIABLE_LIMIT)
-                .forEach(valuationEntry -> methodNameBuilder
-                        .append(valuationEntry
-                                        .getVariable()
-                                        .getName())
-                        .append("eq")
-                        .append(valuationEntry.getValue()));
-        if (valuationEntries.size() > METHOD_NAME_VARIABLE_LIMIT) {
-            methodNameBuilder
-                    .append("_")
-                    .append(random.nextInt());
-        }
-        return methodNameBuilder.toString();
+    private @NotNull String generateMethodName() { //TODO: better approach?
+        return TEST_METHOD_NAME_PREFIX + this.valuationNo++;
     }
 
     private void generateMethodBody(
             @NotNull final Valuation valuation,
             @NotNull final BlockStmt body
     ) {
-        log.info("Creating method body for valuation {}", valuation);
+        log.debug("Creating method body for valuation {}", valuation);
         final List<ValuationEntry<?>> valuationEntries = new ArrayList<>(valuation.entries());
 
         final String originalClassCall = "Example4.main(new String[]{});";
