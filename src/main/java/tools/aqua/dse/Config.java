@@ -20,6 +20,7 @@ import gov.nasa.jpf.constraints.api.SolverContext;
 import gov.nasa.jpf.constraints.api.Valuation;
 import gov.nasa.jpf.constraints.solvers.ConstraintSolverFactory;
 import gov.nasa.jpf.constraints.solvers.SolvingService;
+import lombok.Getter;
 import org.apache.commons.cli.CommandLine;
 import tools.aqua.dse.bounds.BoundedSolverProvider;
 import tools.aqua.dse.objects.Objects;
@@ -61,25 +62,50 @@ public class Config {
 
     private ConstraintSolver solver;
 
+    /**
+     * -- GETTER --
+     *  exploration strategy
+     *
+     * @return
+     */
+    @Getter
     private ExplorationStrategy strategy = ExplorationStrategy.DFS;
 
+    @Getter
     private String executorCmd;
 
+    @Getter
     private String executorArgs;
 
+    @Getter
     private boolean b64encodeExecutorValue = false;
 
+    /**
+     * -- GETTER --
+     *  use incremental solving
+     *
+     * @return
+     */
+    @Getter
     private boolean incremental = false;
 
+    @Getter
     private boolean witness = false;
 
+    @Getter
+    private boolean coverageReport = false;
+
+    @Getter
     private Random random = null;
 
+    @Getter
     private double fraction = 1.0;
 
+    @Getter
     private ClassLoader sourceLoader = Config.class.getClassLoader();
 
     // TODO: make this configurable
+    @Getter
     private int termination = TERMINATE_WHEN_COMPLETE;
 
     private final Properties properties;
@@ -108,15 +134,6 @@ public class Config {
     }
 
     /**
-     * use incremental solving
-     *
-     * @return
-     */
-    public boolean isIncremental() {
-        return incremental;
-    }
-
-    /**
      * constraint solver context
      *
      * @return
@@ -140,45 +157,6 @@ public class Config {
         return false;
     }
 
-    /**
-     * exploration strategy
-     *
-     * @return
-     */
-    public ExplorationStrategy getStrategy() {
-        return strategy;
-    }
-
-    public String getExecutorCmd() {
-        return executorCmd;
-    }
-
-    public String getExecutorArgs() {
-        return executorArgs;
-    }
-
-    public ClassLoader getSourceLoader() {
-        return sourceLoader;
-    }
-
-    public boolean isB64encodeExecutorValue() {
-        return b64encodeExecutorValue;
-    }
-
-    public int getTermination() {
-        return termination;
-    }
-
-    public boolean isWitness() { return witness; }
-
-
-    public double getFraction() {
-        return fraction;
-    }
-
-    public Random getRandom() {
-        return random;
-    }
 
     private void parseProperties(Properties props) {
         if (props.containsKey("dse.executor.args")) {
@@ -231,6 +209,11 @@ public class Config {
 
             sourceLoader = new URLClassLoader(urls);
         }
+
+        if (props.containsKey("dse.coveragereport")) {
+            this.coverageReport = Boolean.parseBoolean(props.getProperty("dse.coveragereport"));
+        }
+
         if (props.containsKey("iflow.fraction")) {
             this.fraction = Double.parseDouble(props.getProperty("iflow.fraction"));
         }

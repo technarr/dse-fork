@@ -66,8 +66,10 @@ public class DSE {
             checkAndSaveWitness(trace);
         }
 
-        final TestGenerator testGenerator = new TestGeneratorImpl();
-        testGenerator.generateTestsBasedOnValuations(valuations);
+        if (config.isCoverageReport()) {
+            final TestGenerator testGenerator = new TestGeneratorImpl(config);
+            testGenerator.generateTestsBasedOnValuations(valuations);
+        }
         System.out.println(explorer.getAnalysis());
 
         InformationFlowAnalysis ia = new InformationFlowAnalysis(config);

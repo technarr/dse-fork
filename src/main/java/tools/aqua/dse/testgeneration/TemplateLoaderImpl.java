@@ -13,10 +13,12 @@ public class TemplateLoaderImpl implements TemplateLoader {
     public static final char DELIMITER_START_CHAR = '<';
     public static final char DELIMITER_STOP_CHAR = '>';
 
+    @NotNull
     public STGroup getTemplates() {
         return getTemplates(DEFAULT_TEMPLATE_FILE_PATH);
     }
 
+    @NotNull
     public STGroup getTemplates(@NotNull final String templateFilePath) {
         final URL resource = this
                 .getClass()
