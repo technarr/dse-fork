@@ -1,11 +1,13 @@
 package tools.aqua.dse.testgeneration;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.stringtemplate.v4.STGroup;
 import org.stringtemplate.v4.STGroupFile;
 
 import java.net.URL;
 
+@Slf4j
 public class TemplateLoaderImpl implements TemplateLoader {
 
     public static final String DEFAULT_TEMPLATE_FILE_PATH = "/templates/TestClassTemplate.stg";

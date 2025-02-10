@@ -29,7 +29,7 @@ public class TestGeneratorImpl implements TestGenerator {
     private long valuationNo = 0;
     private final String originalClassName;
     private final FileWriter fileWriter;
-    private final TemplateManager templateManager;
+    private final TemplateRenderer templateRenderer;
     private final VerifierMockGenerator verifierMockGenerator;
 
     public TestGeneratorImpl(
@@ -38,9 +38,9 @@ public class TestGeneratorImpl implements TestGenerator {
         requireNonNull(config);
 
         this.originalClassName = extractOriginalClassName(config.getExecutorArgs());
-        this.templateManager = new TemplateManager();
-        this.fileWriter = new FileWriter();
-        this.verifierMockGenerator = new VerifierMockGenerator();
+        this.templateRenderer = new TemplateRendererImpl();
+        this.fileWriter = new FileWriterImpl();
+        this.verifierMockGenerator = new VerifierMockGeneratorImpl();
     }
 
     @NotNull
@@ -72,7 +72,7 @@ public class TestGeneratorImpl implements TestGenerator {
                 .map(this::generateTestMethod)
                 .collect(Collectors.toList());
 
-        final String generatedCode = this.templateManager.renderTestClass(className, methods);
+        final String generatedCode = this.templateRenderer.renderTestClass(className, methods);
         log.debug(String.format("Generated Code:%n%s", generatedCode));
 
         CompilationUnit compilationUnit;
@@ -101,7 +101,7 @@ public class TestGeneratorImpl implements TestGenerator {
                 .map(Statement::toString)
                 .collect(Collectors.joining("\n"));
 
-        return this.templateManager.renderTestMethod(methodName, bodyString);
+        return this.templateRenderer.renderTestMethod(methodName, bodyString);
     }
 
     private void generateMethodBody(
@@ -111,7 +111,7 @@ public class TestGeneratorImpl implements TestGenerator {
         requireNonNull(valuation);
         requireNonNull(body);
 
-        log.info("Creating method body for valuation '{}'", valuation);
+        log.debug("Creating method body for valuation '{}'", valuation);
         final List<ValuationEntry<?>> valuationEntries = new ArrayList<>(valuation.entries());
 
         final String originalClassCall = this.originalClassName + STATIC_MAIN_METHOD_CALL;
