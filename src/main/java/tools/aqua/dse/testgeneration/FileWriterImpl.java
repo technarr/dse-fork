@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 import static java.util.Objects.requireNonNull;
 
-//@Slf4j
+@Slf4j
 public class FileWriterImpl implements FileWriter {
     // Use a relative path for the tests directory.
     private static final String RELATIVE_TESTS_DIRECTORY = "coverage-report/src/test/java";

@@ -54,26 +54,6 @@ public class VerifierMockGeneratorImpl implements VerifierMockGenerator {
         return tryStmt;
     }
 
-//    private void addVerifierCalls(
-//            @NotNull final List<ValuationEntry<?>> valuationEntries,
-//            @NotNull final BlockStmt tryBlock
-//    ) {
-//        requireNonNull(valuationEntries);
-//        requireNonNull(tryBlock);
-//
-//        final Map<Class<?>, List<Object>> valueClassToValuesMap = new HashMap<>();
-//        valuationEntries.forEach(entry -> valueClassToValuesMap
-//                .computeIfAbsent(entry
-//                                         .getValue()
-//                                         .getClass(), k -> new ArrayList<>())
-//                .add(entry.getValue()));
-//
-//        valueClassToValuesMap.forEach((clazz, values) -> {
-//            sortValuesByVariableName(valuationEntries, values);
-//            final String methodCall = getVerifierMockingForValueType(clazz, values);
-//            tryBlock.addStatement(StaticJavaParser.parseStatement(methodCall));
-//        });
-//    }
 
     private void addVerifierCalls(
             @NotNull final List<ValuationEntry<?>> valuationEntries,
@@ -101,29 +81,6 @@ public class VerifierMockGeneratorImpl implements VerifierMockGenerator {
         return StaticJavaParser.parseStatement(whenThenCall);
     }
 
-
-//    private void sortValuesByVariableName(
-//            @NotNull final List<ValuationEntry<?>> valuationEntries,
-//            @NotNull final List<Object> values
-//    ) {
-//        requireNonNull(valuationEntries);
-//        requireNonNull(values);
-//
-//        // Provided values are non-ordered, however, their order is important for the mocked verifier call returns
-//        values.sort(Comparator.comparingInt(v -> {
-//            final String name = valuationEntries
-//                    .stream()
-//                    .filter(entry -> entry
-//                            .getValue()
-//                            .equals(v))
-//                    .findFirst()
-//                    .map(entry -> entry
-//                            .getVariable()
-//                            .getName())
-//                    .orElse("");
-//            return Integer.parseInt(name.substring(name.lastIndexOf('_') + 1));
-//        }));
-//    }
 
     @NotNull
     private List<Object> getOrderedValuesForClass(

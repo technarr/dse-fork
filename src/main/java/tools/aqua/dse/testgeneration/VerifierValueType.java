@@ -19,8 +19,8 @@ public enum VerifierValueType {
     SHORT(Short.class, "Verifier::nondetShort", "(short)%d"),
     INTEGER(Integer.class, "Verifier::nondetInt", "%d"),
     LONG(Long.class, "Verifier::nondetLong", "%dL"),
-    FLOAT(Float.class, "Verifier::nondetFloat", "%fF"),
-    DOUBLE(Double.class, "Verifier::nondetDouble", "%fD"),
+    FLOAT(Float.class, "Verifier::nondetFloat", "%eF"),
+    DOUBLE(Double.class, "Verifier::nondetDouble", "%eD"),
     STRING(String.class, "Verifier::nondetString", "\"%s\"");
 
     private final Class<?> type;

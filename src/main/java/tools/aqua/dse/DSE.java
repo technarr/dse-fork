@@ -66,6 +66,8 @@ public class DSE {
             checkAndSaveWitness(trace);
         }
 
+        System.out.printf("Config.isCoverageReport: %s", config.isCoverageReport());
+
         if (config.isCoverageReport()) {
             final TestGenerator testGenerator = new TestGeneratorImpl(config);
             testGenerator.generateTestsBasedOnValuations(valuations);

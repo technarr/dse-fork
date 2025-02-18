@@ -12,12 +12,15 @@ import org.jetbrains.annotations.NotNull;
 import tools.aqua.dse.Config;
 
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
 @Slf4j
 public class TestGeneratorImpl implements TestGenerator {
+
+    private final Logger logger = Logger.getLogger("jdart");
 
     private static final String TEST_METHOD_NAME_PREFIX = "test_valuationNr_";
     private static final String TEST_CLASS_NAME_SUFFIX = "Test";
@@ -62,9 +65,19 @@ public class TestGeneratorImpl implements TestGenerator {
     public void generateTestsBasedOnValuations(@NotNull final List<Valuation> valuations) {
         log.info("Generating test class for '{}{}' based on valuations -------", this.originalClassName,
                  JAVA_FILE_ENDING
-        ); //TODO: zurück auf debug
+        );
 
         requireNonNull(valuations);
+
+        valuations.forEach(valuationEntries -> {
+            logger.info(String.format(
+                    "Valuation mit %d folgenden Entries:", valuationEntries
+                            .entries()
+                            .size()
+            ));
+            valuationEntries.forEach(valuationEntry -> logger.info(
+                    String.format("Variable: %s%nWert: %s", valuationEntry.getVariable(), valuationEntry.getValue())));
+        });
 
         final String className = this.originalClassName + TEST_CLASS_NAME_SUFFIX;
         final List<String> methods = valuations
