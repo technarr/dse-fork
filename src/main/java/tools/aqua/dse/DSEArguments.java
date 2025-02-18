@@ -72,13 +72,19 @@ public class DSEArguments {
         printDSEOptionHelp("dse.executor.args", "executor args (e.g. -cp ... Main)");
         printDSEOptionHelp("dse.b64encode", "base64-encode concolic values passed to executor: true / false (default)");
         printDSEOptionHelp("dse.explore", "one of: inorder, bfs, dfs (default)");
-        printDSEOptionHelp("dse.terminate.on", "| separated list of: assertion, error, bug, completion (default)");
+        printDSEOptionHelp("dse.terminate.on", "| separated list of: assertion, error, bug, taint, completion (default)");
         printDSEOptionHelp("dse.dp", "jconstraints id of solving backend");
         printDSEOptionHelp("dse.dp.incremental", "use incremental solving: true / false (default)");
         printDSEOptionHelp("dse.bounds", "use bounds on integer values when solving: true / false (default)");
         printDSEOptionHelp("dse.bounds.step", "step width (increase of bounds) when using bounds iteratively");
         printDSEOptionHelp("dse.bounds.iter", "no. of bounded solving attempts before dropping bounds");
         printDSEOptionHelp("dse.bounds.type", "fibonacci: uses fibonacci seq. from index 2 (1, 2, 3, 5, ...) as steps");
+        printDSEOptionHelp("dse.witness", "save witness file if possible: true / false (default)");
+        printDSEOptionHelp("dse.sources", "path to folder with sources");
+        printDSEOptionHelp("dse.coveragereport", "generate coverage report: true / false (default)");
+        printDSEOptionHelp("iflow.fraction", "fraction of paths to use in information flow analysis (double)");
+        printDSEOptionHelp("static.info", "static information on inheritance and constructors for objects (filename)");
+        printDSEOptionHelp("random.seed", "random seed (long value)");
         System.out.println();
     }
 

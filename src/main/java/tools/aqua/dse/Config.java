@@ -20,14 +20,20 @@ import gov.nasa.jpf.constraints.api.SolverContext;
 import gov.nasa.jpf.constraints.api.Valuation;
 import gov.nasa.jpf.constraints.solvers.ConstraintSolverFactory;
 import gov.nasa.jpf.constraints.solvers.SolvingService;
+import lombok.Getter;
 import org.apache.commons.cli.CommandLine;
 import tools.aqua.dse.bounds.BoundedSolverProvider;
+import tools.aqua.dse.objects.Objects;
 
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 
 public class Config {
 
@@ -52,22 +58,59 @@ public class Config {
     public static final int TERMINATE_ON_ERROR = 2;
     public static final int TERMINATE_ON_BUG = 4;
 
+    public static final int TERMINATE_ON_TAINT = 8;
+
     private ConstraintSolver solver;
 
+    /**
+     * -- GETTER --
+     *  exploration strategy
+     *
+     * @return
+     */
+    @Getter
     private ExplorationStrategy strategy = ExplorationStrategy.DFS;
 
+    @Getter
     private String executorCmd;
 
+    @Getter
     private String executorArgs;
 
+    @Getter
     private boolean b64encodeExecutorValue = false;
 
+    /**
+     * -- GETTER --
+     *  use incremental solving
+     *
+     * @return
+     */
+    @Getter
     private boolean incremental = false;
 
+    @Getter
+    private boolean witness = false;
+
+    @Getter
+    private boolean coverageReport = false;
+
+    @Getter
+    private Random random = null;
+
+    @Getter
+    private double fraction = 1.0;
+
+    @Getter
+    private ClassLoader sourceLoader = Config.class.getClassLoader();
+
     // TODO: make this configurable
+    @Getter
     private int termination = TERMINATE_WHEN_COMPLETE;
 
     private final Properties properties;
+
+    private Objects objects = null;
 
     private Config(Properties properties) {
         this.properties = properties;
@@ -91,21 +134,17 @@ public class Config {
     }
 
     /**
-     * use incremental solving
-     *
-     * @return
-     */
-    public boolean isIncremental() {
-        return incremental;
-    }
-
-    /**
      * constraint solver context
      *
      * @return
      */
     public SolverContext getSolverContext() {
-        return this.solver.createContext();
+        SolverContext ctx = this.solver.createContext();
+        // init object constraints signature
+        if (objects != null) {
+            objects.initObjectsStructure(ctx);
+        }
+        return ctx;
     }
 
     /**
@@ -118,30 +157,6 @@ public class Config {
         return false;
     }
 
-    /**
-     * exploration strategy
-     *
-     * @return
-     */
-    public ExplorationStrategy getStrategy() {
-        return strategy;
-    }
-
-    public String getExecutorCmd() {
-        return executorCmd;
-    }
-
-    public String getExecutorArgs() {
-        return executorArgs;
-    }
-
-    public boolean isB64encodeExecutorValue() {
-        return b64encodeExecutorValue;
-    }
-
-    public int getTermination() {
-        return termination;
-    }
 
     private void parseProperties(Properties props) {
         if (props.containsKey("dse.executor.args")) {
@@ -175,6 +190,56 @@ public class Config {
             String solverName = props.getProperty("dse.dp");
             this.solver = ConstraintSolverFactory.createSolver(solverName, props);
         }
+
+        if (props.containsKey("dse.witness")) {
+            this.witness = Boolean.parseBoolean(props.getProperty("dse.witness"));
+        }
+        if (props.containsKey("dse.sources")) {
+            String sources = props.getProperty("dse.sources");
+            String[] folders = sources.split("\\:");
+            URL urls[] = new URL[folders.length];
+            int i=0;
+            for (String f : folders) {
+                try {
+                    urls[i++] = Paths.get(f.trim()).toAbsolutePath().toUri().toURL();
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            sourceLoader = new URLClassLoader(urls);
+        }
+
+        if (props.containsKey("dse.coveragereport")) {
+            this.coverageReport = Boolean.parseBoolean(props.getProperty("dse.coveragereport"));
+        }
+
+        if (props.containsKey("iflow.fraction")) {
+            this.fraction = Double.parseDouble(props.getProperty("iflow.fraction"));
+        }
+
+        if (props.containsKey("static.info")) {
+            String filename = props.getProperty("static.info");
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader r = new BufferedReader(new FileReader(filename))) {
+                String line = null;
+                while ((line = r.readLine()) != null) {
+                    sb.append(line);
+                }
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            this.objects = new Objects(sb.toString());
+        }
+
+        long seed = (new Random()).nextLong();
+        if (props.containsKey("random.seed")) {
+            seed = Long.parseLong(props.getProperty("random.seed"));
+        }
+        System.out.println("Random seed: " + seed);
+        this.random = new Random(seed);
     }
 
     private int parseTermination(String property) {
@@ -192,6 +257,9 @@ public class Config {
                         break;
                     case "bug":
                         terminate |= TERMINATE_ON_BUG;
+                        break;
+                    case "taint":
+                        terminate |= TERMINATE_ON_TAINT;
                         break;
                     case "completion":
                         break;

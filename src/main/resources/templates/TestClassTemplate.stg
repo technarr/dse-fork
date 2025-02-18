@@ -1,0 +1,20 @@
+group TestTemplates;
+
+testClass(className, methods) ::= <<
+
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.mockito.MockedStatic;
+import tools.aqua.concolic.Verifier;
+
+class <className> {
+    <methods; separator="\n\n">
+}
+>>
+
+testMethod(methodName, body) ::= <<
+    @Test
+    void <methodName>() {
+        <body>
+    }
+>>

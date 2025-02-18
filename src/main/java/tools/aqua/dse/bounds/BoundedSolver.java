@@ -20,11 +20,12 @@ import gov.nasa.jpf.constraints.api.Expression;
 import gov.nasa.jpf.constraints.api.SolverContext;
 import gov.nasa.jpf.constraints.api.Valuation;
 import gov.nasa.jpf.constraints.api.Variable;
-import gov.nasa.jpf.constraints.expressions.Constant;
-import gov.nasa.jpf.constraints.expressions.NumericBooleanExpression;
-import gov.nasa.jpf.constraints.expressions.NumericComparator;
+import gov.nasa.jpf.constraints.expressions.*;
 import gov.nasa.jpf.constraints.types.BuiltinTypes;
 import gov.nasa.jpf.constraints.util.ExpressionUtil;
+import tools.aqua.redistribution.org.smtlib.sexpr.Sexpr;
+
+import java.math.BigInteger;
 
 public class BoundedSolver extends ConstraintSolver {
 
@@ -50,18 +51,20 @@ public class BoundedSolver extends ConstraintSolver {
 		this.type = type;
 	}
 
-	@Override
-	public Result solve(Expression<Boolean> exprsn, Valuation vltn) {
+  @Override
+  public Result solve(Expression<Boolean> exprsn, Valuation vltn) {
 
-		Result res = null;
-		for (int i = 1; i <= itr; i++) {
-			res = back.solve(ExpressionUtil.and(exprsn, getBound(exprsn, i)), vltn);
-			if (res == Result.SAT) {
-				return res;
-			}
-		}
-		return back.solve(exprsn, vltn);
-	}
+    Result res = null;
+    if (isBoundable(exprsn)) {
+      for (int i = 1; i <= itr; i++) {
+        res = back.solve(ExpressionUtil.and(exprsn, getBound(exprsn, i)), vltn);
+        if (res == Result.SAT) {
+          return res;
+        }
+      }
+    }
+    return back.solve(exprsn, vltn);
+  }
 
 	@Override
 	public BoundedSolverContext createContext() {
@@ -90,7 +93,33 @@ public class BoundedSolver extends ConstraintSolver {
 				Expression<Boolean> upper = new NumericBooleanExpression(v, NumericComparator.LE, high);
 				ret = ExpressionUtil.and(ret, lower, upper);
 			}
+			if(v.getType().equals(BuiltinTypes.STRING)){
+				Expression<BigInteger> strLen = StringIntegerExpression.createLength(v);
+				Constant<BigInteger> upperBound = Constant.create(BuiltinTypes.INTEGER, BigInteger.valueOf(bound*10));
+				Expression<Boolean> upper = new NumericBooleanExpression(strLen, NumericComparator.LE, upperBound);
+				ret = ExpressionUtil.and(ret, upper);
+			}
+			if(v.getType().equals(BuiltinTypes.DOUBLE)){
+				Expression<Boolean> bound1 = new Negation(new FloatingPointBooleanExpression(FPComparator.FP_IS_NAN, v));
+				Expression<Boolean> bound2 = new Negation(new FloatingPointBooleanExpression(FPComparator.FP_IS_INFINITE, v));
+				ret = ExpressionUtil.and(ret, bound1, bound2);
+			}
 		}
 		return ret;
+	}
+
+	public static boolean isBoundable(Expression<Boolean> e){
+		for (Variable v : ExpressionUtil.freeVariables(e)) {
+			if (v.getType().equals(BuiltinTypes.SINT32)) {
+				return true;
+			}
+			if(v.getType().equals(BuiltinTypes.STRING)){
+				return true;
+			}
+			if(v.getType().equals(BuiltinTypes.DOUBLE)){
+				return true;
+			}
+		}
+		return false;
 	}
 }

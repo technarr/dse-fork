@@ -22,10 +22,10 @@ import gov.nasa.jpf.constraints.api.ConstraintSolver.Result;
 import gov.nasa.jpf.constraints.api.Expression;
 import gov.nasa.jpf.constraints.api.SolverContext;
 import gov.nasa.jpf.constraints.api.Valuation;
-import gov.nasa.jpf.constraints.util.ExpressionUtil;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import tools.aqua.dse.Config;
 import tools.aqua.dse.paths.PathResult;
-import tools.aqua.dse.paths.PathState;
 import tools.aqua.dse.trace.Decision;
 
 import java.util.*;
@@ -66,7 +66,7 @@ public class ConstraintsTree {
   /** exploration strategy */
   private ExplorationStrategy strategy = new DFSExplorationStrategy();
   /** termination condition */
-  private int termination;
+  private final int termination;
   /** termination flag **/
   private boolean terminate = false;
 
@@ -240,6 +240,35 @@ public class ConstraintsTree {
       //currentTarget = (LeafNode) current;
     }
 
+    updatedLeaf = getUpdatedLeafForResultState(result, updatedLeaf);
+
+    if ((termination & Config.TERMINATE_ON_TAINT) > 0
+            && !result
+            .getTaintViolations()
+            .isEmpty()) {
+      System.out.println("--- terminating DSE after tainting violation");
+      terminate = true;
+    }
+
+    updatedLeaf.setComplete(((LeafNode) current).complete());
+
+    if (current.parent() == null) {
+      root = updatedLeaf;
+    } else {
+      current.parent().replace((LeafNode) current, updatedLeaf);
+    }
+    current = updatedLeaf;
+    if (initialTarget == null) {
+      initialTarget = updatedLeaf;
+    }
+  }
+
+  @Nullable
+  private LeafNode getUpdatedLeafForResultState(
+          @NotNull
+          final PathResult result,
+          @Nullable LeafNode updatedLeaf
+  ) {
     switch (result.getState()) {
       case OK:
         updatedLeaf =
@@ -259,6 +288,7 @@ public class ConstraintsTree {
 
         if ((termination & Config.TERMINATE_ON_ASSERTION_VIOLATION) > 0
                 && ((PathResult.ErrorResult) result).getExceptionClass().equals("java/lang/AssertionError")) {
+          System.out.println("--- terminating DSE after assertion violation");
           terminate = true;
         }
 
@@ -273,18 +303,7 @@ public class ConstraintsTree {
                 ((PathResult.AbortResult) result).getReason());
         break;
     }
-
-    updatedLeaf.setComplete(((LeafNode) current).complete());
-
-    if (current.parent() == null) {
-      root = updatedLeaf;
-    } else {
-      current.parent().replace((LeafNode) current, updatedLeaf);
-    }
-    current = updatedLeaf;
-    if (initialTarget == null) {
-      initialTarget = updatedLeaf;
-    }
+    return updatedLeaf;
   }
 
   /** */
@@ -385,8 +404,8 @@ public class ConstraintsTree {
   }
 
   private Node leastCommonAncestor(Node n1, Node n2) {
-    Node a1 = null;
-    Node a2 = null;
+    Node a1;
+    Node a2;
     if (n1.depth() > n2.depth()) {
       a1 = n1;
       a2 = n2;
@@ -443,7 +462,8 @@ public class ConstraintsTree {
         if ((nextOpen.parent() == null && root != nextOpen)
             || (nextOpen.parent() != null
                 && nextOpen.parent().getChild(nextOpen.childId()) != nextOpen)
-            || nextOpen.isFinal()) {
+            || nextOpen.isFinal()
+            || (nextOpen.parent() != null && nextOpen.parent().isExhausted())) {
           nextOpen = null;
           continue;
         }
@@ -468,6 +488,8 @@ public class ConstraintsTree {
         case UNSAT:
           failCurrentTargetUnsat();
           break;
+        case ERROR:
+          System.out.println("Error SMT result");
         case DONT_KNOW:
           failCurrentTargetDontKnow();
           break;
@@ -486,6 +508,9 @@ public class ConstraintsTree {
            */
           expectedPath = expectedPathTo(currentTarget);
           return val;
+        default:
+          failCurrentTargetDontKnow();
+          break;
       }
     }
 

@@ -61,11 +61,15 @@ public class Executor {
             Path output = Files.createTempFile("dse", "");
             int rc = (new ProcessBuilder())
                     .command(cmd)
+                    .redirectErrorStream(true)
                     .redirectOutput(ProcessBuilder.Redirect.to(output.toFile()))
                     .start()
                     .waitFor();
 
             List<String> lines = Files.readAllLines(output);
+//            System.out.println("%%%%%%%%%%% Executor Output Start");
+//            lines.forEach(n ->{System.out.println(n);});
+//            System.out.println("%%%%%%%%%%% Executor Output End");
             Files.delete(output);
             return TraceParser.parseTrace(lines, val);
         } catch (Throwable t) {

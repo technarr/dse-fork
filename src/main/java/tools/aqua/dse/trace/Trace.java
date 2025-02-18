@@ -24,15 +24,37 @@ public class Trace {
 
     private final List<Decision> decisions;
 
+    private final List<WitnessAssumption> witness;
+
+    private final List<String> flows;
+
     private final PathResult traceState;
 
     public Trace(List<Decision> decisions, PathResult state) {
+        this(decisions, null, null, state);
+    }
+
+    public Trace(List<Decision> decisions, List<WitnessAssumption> witness, List<String> flows, PathResult state) {
         this.decisions = decisions;
+        this.witness = witness;
+        this.flows = flows;
         this.traceState = state;
     }
 
     public List<Decision> getDecisions() {
         return decisions;
+    }
+
+    public boolean hasWitness() {
+        return witness != null;
+    }
+
+    public List<WitnessAssumption> getWitness() {
+        return witness;
+    }
+
+    public List<String> getFlows() {
+        return flows;
     }
 
     public PathResult getTraceState() {
@@ -51,6 +73,7 @@ public class Trace {
         return "Trace{" +
                 "decisions=" + Arrays.toString(decisions.toArray()) +
                 ", traceState=" + traceState +
+                ", flows=" + flows +
                 '}';
     }
 }
